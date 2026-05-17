@@ -15,21 +15,22 @@ type StationInput = {
 };
 
 /**
- * Get all charging stations with their chargers by names in ascending order
+ * Get all charging stations with their chargers by name in ascending order
  */
 export async function getAllStations() {
     return prisma.station.findMany({
-    include: {
-        chargers: true,
-    },
-    orderBy: {
-        name: "asc",
-    },
+        // include their chargers
+        include: {
+            chargers: true,
+        },
+        orderBy: {
+            name: "asc",
+        },
     });
 }
 
 /**
- * Get a charging station by its ID
+ * Get a charging station by its id
  */
 export async function getStationById(id: string) {
     return prisma.station.findUnique({

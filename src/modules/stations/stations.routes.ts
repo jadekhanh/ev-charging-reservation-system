@@ -7,23 +7,31 @@ import {
     getStationByIdController,
     createStationController,
     updateStationController,
-    deleteStationController
+    deleteStationController,
  } from "./stations.controller"
+import {
+    getChargersByStationController,
+} from "../chargers/chargers.controller"
 
 const router = Router();
 
 /**
  * Get all charging stations
  * GET /api/stations
- * Get all charging stations
  */
 router.get("/", getStationsController);
 
 /**
- * Get a station by its id
- * GET /api/stations:id
+ * Get all chargers by station id
+ * GET /api/stations/:stationId/chargers
  */
-router.get("/", getStationByIdController);
+router.get("/:stationId/chargers", getChargersByStationController);
+
+/**
+ * Get a station by its id
+ * GET /api/stations/:id
+ */
+router.get("/:id", getStationByIdController);
 
 /**
  * Create station
@@ -32,7 +40,7 @@ router.get("/", getStationByIdController);
 router.post("/", createStationController);
 
 /**
- * Update station fields
+ * Update station fields by their id
  * PUT /api/stations/:id
  */
 router.put("/:id", updateStationController);

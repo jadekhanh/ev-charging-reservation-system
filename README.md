@@ -96,5 +96,7 @@ npm run dev
 ```
 
 To end:
+```
 Ctrl + C
+```
 

@@ -11,8 +11,8 @@ import {
 } from "./stations.service";
 
 /**
- * GET /api/stations
  * Get all charging stations with their chargers
+ * GET /api/stations
  */
 export async function getStationsController(req: Request, res: Response) {
     try {
@@ -34,8 +34,8 @@ export async function getStationsController(req: Request, res: Response) {
 }
 
 /**
- * GET /api/stations/:id
  * Get a station by its id
+ * GET /api/stations/:id
  */
 export async function getStationByIdController(req: Request, res:Response) {
     try {
@@ -70,7 +70,7 @@ export async function getStationByIdController(req: Request, res:Response) {
 }
 
 /**
- * Create station
+ * Create a station
  * POST /api/stations
  */
 export async function createStationController(req: Request, res: Response) {
@@ -92,7 +92,7 @@ export async function createStationController(req: Request, res: Response) {
 }
 
 /**
- * Update station fields
+ * Update a station fields
  * PUT /api/stations/:id
  */
 export async function updateStationController(req: Request, res: Response) {

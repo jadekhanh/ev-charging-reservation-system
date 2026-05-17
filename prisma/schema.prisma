@@ -32,6 +32,14 @@ enum PowerLevel {
     DC_FAST
 }
 
+// Reservation status for reservations
+enum ReservationStatus {
+    HOLD
+    CONFIRMED
+    CANCELLED
+    COMPLETED
+}
+
 // User model for authentication and authorization
 model User {
     id              String          @id @default(uuid())
@@ -77,6 +85,7 @@ model Reservation {
     startTime   DateTime
     endTime     DateTime
     createdAt   DateTime @default(now())
+    status      ReservationStatus @default(HOLD)
     user        User     @relation(fields: [userId], references: [id])
     charger     Charger  @relation(fields: [chargerId], references: [id])
     @@index([chargerId, startTime, endTime])
