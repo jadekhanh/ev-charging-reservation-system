@@ -8,10 +8,13 @@ import {
     createStationController,
     updateStationController,
     deleteStationController,
- } from "./stations.controller"
+ } from "./stations.controller";
 import {
     getChargersByStationController,
-} from "../chargers/chargers.controller"
+} from "../chargers/chargers.controller";
+import {
+    getReservationsByStationIdController,
+} from "../reservations/reservations.controller";
 
 const router = Router();
 
@@ -22,16 +25,22 @@ const router = Router();
 router.get("/", getStationsController);
 
 /**
+ * Get a station by its id
+ * GET /api/stations/:id
+ */
+router.get("/:id", getStationByIdController);
+
+/**
  * Get all chargers by station id
  * GET /api/stations/:stationId/chargers
  */
 router.get("/:stationId/chargers", getChargersByStationController);
 
 /**
- * Get a station by its id
- * GET /api/stations/:id
+ * Get all reservations belonging to a station
+ * GET /api/stations/:stationId/reservations
  */
-router.get("/:id", getStationByIdController);
+router.get("/:stationId/reservations", getReservationsByStationIdController);
 
 /**
  * Create station

@@ -268,7 +268,7 @@ export async function createReservationHoldController(req: Request, res: Respons
 }
 
 /**
- * Confirm/create a reservation by its id
+ * Confirm a reservation by its id
  * POST /api/reservations/confirm
  */
 export async function confirmReservationController(req: Request, res: Response) {

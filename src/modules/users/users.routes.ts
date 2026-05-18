@@ -8,7 +8,10 @@ import {
     createUserController,
     updateUserController,
     deleteUserController,
-} from "./users.controller"
+} from "./users.controller";
+import {
+    getReservationsByUserIdController,
+} from "../reservations/reservations.controller";
 
 const router = Router();
 
@@ -23,6 +26,12 @@ router.get("/", getUsersController);
  * GET /api/users/:id
  */
 router.get("/:id", getUserByIdController);
+
+/**
+ * Get all reservations belonging to a user
+ * GET /api/users/:userId/reservations
+ */
+router.get("/userId/reservations", getReservationsByUserIdController);
 
 /**
  * Create user

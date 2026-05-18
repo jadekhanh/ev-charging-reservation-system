@@ -9,6 +9,9 @@ import {
     updateChargerController,
     deleteChargerController,
 } from "./chargers.controller"
+import {
+    getReservationsByChargerIdController,
+} from "../reservations/reservations.controller"
 
 const router = Router();
 
@@ -23,6 +26,12 @@ router.get("/", getChargersController);
  * GET /api/chargers/:id
  */
 router.get("/:id", getChargerByIdController);
+
+/**
+ * Get all reservations belonging to a charger
+ * GET /api/chargers/:chargerId/reservations
+ */
+router.get("/chargerId/reservations", getReservationsByChargerIdController);
 
 /**
  * Create charger
