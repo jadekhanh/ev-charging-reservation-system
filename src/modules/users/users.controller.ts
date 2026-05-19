@@ -9,27 +9,19 @@ import {
     createUser,
     updateUser,
 } from "./users.service";
+import { ApiError } from "../../utils/ApiError";
 
 /**
  * Get all users
  * GET /api/users
  */
 export async function getUsersController(req: Request, res: Response) {
-    try {
-        const users = await getAllUsers();
+    const users = await getAllUsers();
 
-        return res.status(200).json({
-            success: true,
-            data: users,
-        });
-    } catch (error) {
-        console.error("Error fetching all users:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch all users.",
-        });
-    }
+    return res.status(200).json({
+        success: true,
+        data: users,
+    });
 }
 
 /**
@@ -37,33 +29,21 @@ export async function getUsersController(req: Request, res: Response) {
  * GET /api/users/:id
  */
 export async function getUserByIdController(req: Request, res: Response) {
-    try {
-        const {id} = req.params;
-        if (typeof id !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid user id",
-            });
-        }
-        const user = await getUserById(id);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
-        }
-        return res.status(200).json({
-            success: true,
-            data: user
-        });
-    } catch (error) {
-        console.error("Error fetching user:", error)
-        
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch user",
-        });
+    // check if user id is valid
+    const {id} = req.params;
+    if (typeof id !== "string") {
+        throw new ApiError(400, "Invalid user id");
     }
+    // check if user exists
+    const user = await getUserById(id);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    return res.status(200).json({
+        success: true,
+        data: user
+    });
 }
 
 /**
@@ -71,21 +51,12 @@ export async function getUserByIdController(req: Request, res: Response) {
  * POST /api/users
  */
 export async function createUserController(req: Request, res: Response) {
-    try {
-        const user = await createUser(req.body);
+    const user = await createUser(req.body);
 
-        return res.status(201).json({
-            success: true,
-            data: user,
-        });
-    } catch (error) {
-        console.error("Error creating user:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to create user",
-        });
-    }
+    return res.status(201).json({
+        success: true,
+        data: user,
+    });
 }
 
 /**
@@ -93,28 +64,23 @@ export async function createUserController(req: Request, res: Response) {
  * PUT /api/users/:id
  */
 export async function updateUserController(req: Request, res: Response) {
-    try {
-        const {id} = req.params;
-        if (typeof id !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid user id",
-            });
-        }
-        const updatedUser = await updateUser(id, req.body);
-
-        return res.status(200).json({
-            success: true,
-            data: updatedUser,
-        });
-    } catch (error) {
-        console.error("Error updating user", error)
-
-        return res.status(500).json({
-             success: false,
-             message: "Failed to update user",
-        });
+    // check if user id is valid
+    const {id} = req.params;
+    if (typeof id !== "string") {
+        throw new ApiError(400, "Invalid user id");
     }
+    // check if user exists
+    const user = await getUserById(id);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    const updatedUser = await updateUser(id, req.body);
+
+    return res.status(200).json({
+        success: true,
+        data: updatedUser,
+    });
 }
 
 /**
@@ -122,26 +88,21 @@ export async function updateUserController(req: Request, res: Response) {
  * DELETE /api/users/:id
  */
 export async function deleteUserController(req: Request, res: Response) {
-    try {
-        const {id} = req.params;
-        if (typeof id !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid user id",
-            });
-        }
-        await deleteUser(id);
-
-        return res.status(200).json({
-            success: true,
-            message: "User deleted successfully",
-        });
-    } catch (error) {
-        console.error("Error deleting user:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to delete user",
-        });
+    // check if user id is valid
+    const {id} = req.params;
+    if (typeof id !== "string") {
+        throw new ApiError(400, "Invalid user id");
     }
+    // check if user exists
+    const user = await getUserById(id);
+    if (!user) {
+        throw new ApiError(404, "User not found");
+    }
+
+    await deleteUser(id);
+
+    return res.status(200).json({
+        success: true,
+        message: "User deleted successfully",
+    });
 }

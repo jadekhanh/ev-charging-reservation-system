@@ -4,6 +4,7 @@
 import {ReservationStatus} from "@prisma/client";
 import prisma from "../../config/prisma";
 import redis from "../../config/redis";
+import { ApiError } from "../../utils/ApiError";
 
 /**
  * Expected data for createReservationHold(data), confirmReservation(data) and updateReservation(data)
@@ -164,7 +165,7 @@ export async function confirmReservation(data: ReservationInput) {
     const hasConflict = await hasReservationConflict(data.chargerId, data.startTime, data.endTime);
     if (hasConflict) {
         // stop the request
-        throw new Error("This charger time slot is already reserved");
+        throw new ApiError(409, "This charger time slot is already reserved");
     }
 
     // check if there's an existing hold for this charger in this time slot
@@ -172,7 +173,7 @@ export async function confirmReservation(data: ReservationInput) {
     const existingHold = await redis.get(holdKey);
     if (!existingHold) {
         // stop the request
-        throw new Error("Reservation hold expires or does not exist");
+        throw new ApiError(409, "Reservation hold expired or does not exist");
     }
 
     // create this reservation
@@ -201,7 +202,7 @@ export async function createReservationHold(data: ReservationInput) {
     const hasConflict = await hasReservationConflict(data.chargerId, data.startTime, data.endTime);
     if (hasConflict) {
         // stop the request
-        throw new Error("This charger time slot is already reserved");
+        throw new ApiError(409, "This charger time slot is already reserved");
     }
 
     // check if there's an existing hold for this charger in this time slot
@@ -209,7 +210,7 @@ export async function createReservationHold(data: ReservationInput) {
     const existingHold = await redis.get(holdKey);
     if (existingHold) {
         // stop the request
-        throw new Error("This charger time slot is being held");
+        throw new ApiError(409, "This charger time slot is currently being held");
     }
 
     // if this slot is not held yet, hold this slot for 5 minutes

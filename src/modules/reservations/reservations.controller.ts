@@ -14,27 +14,39 @@ import {
     createReservationHold,
     confirmReservation,
 } from "./reservations.service";
+import { ApiError } from "../../utils/ApiError";
+import { UserRole } from "@prisma/client";
 
 /**
  * Get all reservations
  * GET /api/reservations
  */
 export async function getReservationsController(req: Request, res: Response) {
-    try {
-        const reservations = await getAllReservations();
+    const reservations = await getAllReservations();
 
-        return res.status(200).json({
-            success: true,
-            data: reservations,
-        });
-    } catch (error) {
-        console.error("Error fetching all reservations:", error)
+    return res.status(200).json({
+        success: true,
+        data: reservations,
+    });
+}
 
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch all reservations.",
-        });
+/**
+ * Get current user's reservations
+ * GET /api/reservations/me
+ */
+export async function getMyReservationsController(req: Request, res: Response) {
+    const userId = req.user?.id;
+
+    if (!userId) {
+        throw new ApiError(401, "Authentication required");
     }
+
+    const reservations = await getReservationsByUserId(userId);
+
+    return res.status(200).json({
+        success: true,
+        data: reservations,
+    });
 }
 
 /**
@@ -42,28 +54,16 @@ export async function getReservationsController(req: Request, res: Response) {
  * GET /api/stations/:stationId/reservations
  */
 export async function getReservationsByStationIdController(req: Request, res: Response) {
-    try {
-        const {stationId} = req.params;
-        if (typeof stationId !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid station id",
-            });
-        }
-        const reservations = await getReservationsByStationId(stationId);
-
-        return res.status(200).json({
-            success: true,
-            data: reservations,
-        });
-    } catch (error) {
-        console.error("Error fetching all reservations for station:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch all reservations for station.",
-        });
+    const {stationId} = req.params;
+    if (typeof stationId !== "string") {
+        throw new ApiError(400, "Invalid station id");
     }
+    const reservations = await getReservationsByStationId(stationId);
+
+    return res.status(200).json({
+        success: true,
+        data: reservations,
+    });
 }
 
 /**
@@ -71,28 +71,16 @@ export async function getReservationsByStationIdController(req: Request, res: Re
  * GET /api/users/:userId/reservations
  */
 export async function getReservationsByUserIdController(req: Request, res: Response) {
-    try {
-        const {userId} = req.params;
-        if (typeof userId !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid user id",
-            });
-        }
-        const reservations = await getReservationsByUserId(userId);
-
-        return res.status(200).json({
-            success: true,
-            data: reservations,
-        });
-    } catch (error) {
-        console.error("Error fetching all reservations for user:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch all reservations for user.",
-        });
+    const {userId} = req.params;
+    if (typeof userId !== "string") {
+        throw new ApiError(400, "Invalid user id");
     }
+    const reservations = await getReservationsByUserId(userId);
+
+    return res.status(200).json({
+        success: true,
+        data: reservations,
+    });
 }
 
 /**
@@ -100,28 +88,16 @@ export async function getReservationsByUserIdController(req: Request, res: Respo
  * GET /api/chargers/:chargerId/reservations
  */
 export async function getReservationsByChargerIdController(req: Request, res: Response) {
-    try {
-        const {chargerId} = req.params;
-        if (typeof chargerId !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid charger id",
-            });
-        }
-        const reservations = await getReservationsByChargerId(chargerId);
-
-        return res.status(200).json({
-            success: true,
-            data: reservations,
-        });
-    } catch (error) {
-        console.error("Error fetching all reservations for charger:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch all reservations for charger.",
-        });
+    const {chargerId} = req.params;
+    if (typeof chargerId !== "string") {
+        throw new ApiError(400, "Invalid charger id");
     }
+    const reservations = await getReservationsByChargerId(chargerId);
+
+    return res.status(200).json({
+        success: true,
+        data: reservations,
+    });
 }
 
 /**
@@ -129,33 +105,28 @@ export async function getReservationsByChargerIdController(req: Request, res: Re
  * GET /api/reservations/:id
  */
 export async function getReservationByIdController(req: Request, res: Response) {
-    try {
-        const {id} = req.params;
-        if (typeof id !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid reservation id",
-            });
-        }
-        const reservation = await getReservationById(id);
-        if (!reservation) {
-            return res.status(404).json({
-                success: false,
-                message: "Reservation not found",
-            });
-        }
-        return res.status(200).json({
-            success: true,
-            data: reservation,
-        });
-    } catch (error) {
-        console.error("Error fetching reservation:", error)
-        
-        return res.status(500).json({
-            success: false,
-            message: "Failed to fetch reservation",
-        });
+    // check if user id is valid
+    const {id} = req.params;
+    if (typeof id !== "string") {
+        throw new ApiError(400, "Invalid reservation id");
     }
+    // check if reservation exists
+    const reservation = await getReservationById(id);
+    if (!reservation) {
+        throw new ApiError(404, "Reservation not found");
+    }
+    // check if this user is a customer and is the customer assigned to current reservation
+    if (
+        req.user?.role === UserRole.CUSTOMER &&
+        reservation.userId !== req.user.id
+    ) {
+        throw new ApiError(403, "Do not have permission to access this reservation");
+    }
+
+    return res.status(200).json({
+        success: true,
+        data: reservation,
+    });
 }
 
 /**
@@ -163,28 +134,30 @@ export async function getReservationByIdController(req: Request, res: Response) 
  * PUT /api/reservations/:id
  */
 export async function updateReservationController(req: Request, res: Response) {
-    try {
-        const {id} = req.params;
-        if (typeof id !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid reservation id",
-            });
-        }
-        const updatedReservation = await updateReservation(id, req.body);
-
-        return res.status(200).json({
-            success: true,
-            data: updatedReservation,
-        });
-    } catch (error) {
-        console.error("Error updating reservation", error)
-
-        return res.status(500).json({
-             success: false,
-             message: "Failed to update reservation",
-        });
+    // check if user id is valid
+    const {id} = req.params;
+    if (typeof id !== "string") {
+        throw new ApiError(400, "Invalid reservation id");
     }
+    // check if reservation exists
+    const reservation = await getReservationById(id);
+    if (!reservation) {
+        throw new ApiError(404, "Reservation not found");
+    }
+    // check if this user is a customer not assigned to this reservation
+    if (
+        req.user?.role === UserRole.CUSTOMER &&
+        reservation.userId !== req.user.id
+    ) {
+        throw new ApiError(403, "Do not have permission to access this reservation");
+    }
+
+    const updatedReservation = await updateReservation(id, req.body);
+
+    return res.status(200).json({
+        success: true,
+        data: updatedReservation,
+    });
 }
 
 /**
@@ -192,28 +165,17 @@ export async function updateReservationController(req: Request, res: Response) {
  * DELETE /api/reservations/:id
  */
 export async function deleteReservationController(req: Request, res: Response) {
-    try {
-        const {id} = req.params;
-        if (typeof id !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid reservation id",
-            });
-        }
-        await deleteReservation(id);
-
-        return res.status(200).json({
-            success: true,
-            message: "Reservation deleted successfully",
-        });
-    } catch (error) {
-        console.error("Error deleting reservation:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to delete reservation",
-        });
+    // check if user id is valid
+    const {id} = req.params;
+    if (typeof id !== "string") {
+        throw new ApiError(400, "Invalid reservation id");
     }
+    await deleteReservation(id);
+
+    return res.status(200).json({
+        success: true,
+        message: "Reservation deleted successfully",
+    });
 }
 
 /**
@@ -221,28 +183,29 @@ export async function deleteReservationController(req: Request, res: Response) {
  * POST /api/reservations/:id/cancel
  */
 export async function cancelReservationController(req: Request, res: Response) {
-    try {
-        const {id} = req.params;
-        if (typeof id !== "string") {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid reservation id",
-            });
-        }
-        const reservation = await cancelReservation(id);
-
-        return res.status(200).json({
-            success: true,
-            data: reservation,
-        });
-    } catch (error) {
-        console.error("Error canceling reservation:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to cancel reservation",
-        });
+    // check if user id is valid
+    const {id} = req.params;
+    if (typeof id !== "string") {
+        throw new ApiError(400, "Invalid reservation id");
     }
+    // check if reservation exists
+    const reservation = await getReservationById(id);
+    if (!reservation) {
+        throw new ApiError(404, "Reservation not found");
+    }
+    // check if this user is a customer not assigned to this reservation
+    if (
+        req.user?.role === UserRole.CUSTOMER &&
+        reservation.userId !== req.user.id
+    ) {
+        throw new ApiError(403, "Do not have permission to access this reservation");
+    }
+    const cancelledReservation = await cancelReservation(id);
+
+    return res.status(200).json({
+        success: true,
+        data: cancelledReservation,
+    });
 }
 
 /**
@@ -250,21 +213,12 @@ export async function cancelReservationController(req: Request, res: Response) {
  * POST /api/reservations/hold
  */
 export async function createReservationHoldController(req: Request, res: Response) {
-    try {
-        const reservation = await createReservationHold(req.body);
+    const reservation = await createReservationHold(req.body);
 
-        return res.status(201).json({
-            success: true,
-            data: reservation,
-        });
-    } catch (error) {
-        console.error("Error creating reservation hold:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to create reservation hold",
-        });
-    }
+    return res.status(201).json({
+        success: true,
+        data: reservation,
+    });
 }
 
 /**
@@ -272,19 +226,10 @@ export async function createReservationHoldController(req: Request, res: Respons
  * POST /api/reservations/confirm
  */
 export async function confirmReservationController(req: Request, res: Response) {
-    try {
-        const reservation = await confirmReservation(req.body);
+    const reservation = await confirmReservation(req.body);
 
-        return res.status(201).json({
-            success: true,
-            data: reservation,
-        });
-    } catch (error) {
-        console.error("Error confirming reservation hold:", error)
-
-        return res.status(500).json({
-            success: false,
-            message: "Failed to confirm reservation hold",
-        });
-    }
+    return res.status(201).json({
+        success: true,
+        data: reservation,
+    });
 }

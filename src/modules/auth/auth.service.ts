@@ -5,6 +5,8 @@ import { UserRole } from "@prisma/client";
 import prisma from "../../config/prisma";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { ApiError } from "../../utils/ApiError";
+import { env } from "../../config/env";
 
 /**
  * Input for registerUser(data)
@@ -43,8 +45,8 @@ export async function getCurrentUser(id: string) {
  * Create a JWT token
  */
 function createToken(userId: string, role: UserRole) {
-    // read secret key from .env
-    const secret = process.env.JWT_SECRET;
+    // read secret key from env
+    const secret = env.JWT_SECRET;
 
     // stop if the secret key is missing
     if (!secret) {
@@ -73,7 +75,7 @@ export async function loginUser(data: LoginInput) {
         },
     });
     if (!user) {
-        throw new Error("Invalid email or password");
+        throw new ApiError(401, "Invalid email or password");
     }
     // if email is correct, check if password is correct using bcrypt password-checking function
     const isPasswordCorrect = await bcrypt.compare(
@@ -81,7 +83,7 @@ export async function loginUser(data: LoginInput) {
         user.passwordHash,
     );
     if (!isPasswordCorrect) {
-        throw new Error("Invalid email or password");
+        throw new ApiError(401, "Invalid email or password");
     }
 
     // create a login pass = JWT token
@@ -108,7 +110,7 @@ export async function registerUser(data: RegisterInput) {
         }
     });
     if (existingUser) {
-        throw new Error("User already exists");
+        throw new ApiError(409, "User already exists");
     }
 
     // create a password hash for this user using bcrypt

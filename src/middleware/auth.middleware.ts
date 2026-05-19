@@ -4,6 +4,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { UserRole } from "@prisma/client";
+import { env } from "../config/env";
 
 /**
  * JWT payload input type
@@ -34,8 +35,8 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
         // extract <token> from Authorization header
         const token = authHeader.split(" ")[1];
         
-        // read secret key from .env
-        const secret = process.env.JWT_SECRET;
+        // read secret key from env.ts
+        const secret = env.JWT_SECRET;
 
         // check if the secret key is missing
         if (!secret) {
