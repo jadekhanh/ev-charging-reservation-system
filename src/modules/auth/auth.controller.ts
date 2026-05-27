@@ -35,7 +35,10 @@ export async function loginController(req: Request, res: Response) {
 
     return res.status(200).json({
         success: true,
-        data: result,
+        data: {
+            user: result.user,
+            token: result.token,
+        }
     });
 }
 

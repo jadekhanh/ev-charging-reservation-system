@@ -12,6 +12,7 @@ import reservationRoutes from "./modules/reservations/reservations.routes";
 import { APIRateLimiter } from "./middleware/rateLimiter.middleware";
 import { notFoundHandler } from "./middleware/notFound.middleware";
 import { errorHandler } from "./middleware/error.middleware";
+import { swaggerDocs, swaggerSetup } from "./config/swagger";
 
 // creates Express app
 const app = express();
@@ -21,6 +22,8 @@ app.use(cors());
 app.use(express.json());
 // app applies rate limiter globally so every request passes through it
 app.use(APIRateLimiter);
+// app runs Swagger docs
+app.use("/api-docs", swaggerDocs, swaggerSetup);
 
 // connect all routes
 app.use("/api/auth", authRoutes);
