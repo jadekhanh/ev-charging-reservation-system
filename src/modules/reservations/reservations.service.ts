@@ -62,6 +62,38 @@ async function hasReservationConflict(chargerId: string, startTime: Date, endTim
 }
 
 /**
+ * Check if there's an overlapping Redis reservation hold
+ * @param chargerId 
+ * @param startTime 
+ * @param endTime 
+ * @returns 
+ */
+async function hasOverlappingHold(chargerId: string, startTime: Date, endTime: Date) {
+    const keys = await redis.keys(`hold:${chargerId}:*`);
+
+    for (const key of keys) {
+        const value = await redis.get(key);
+
+        if (!value) continue;
+
+        const hold = JSON.parse(value);
+
+        const holdStart = new Date(hold.startTime);
+        const holdEnd = new Date(hold.endTime);
+
+        const overlaps =
+            holdStart < endTime &&
+            holdEnd > startTime;
+
+        if (overlaps) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Get all reservations by station in ascending order
  */
 export async function getAllReservations() {
@@ -161,73 +193,126 @@ export async function cancelReservation(id: string) {
  * Confirm a new reservation from existing Redis reservation hold
  */
 export async function confirmReservation(data: ReservationInput) {
-    // check if there's a confirmed reservation conflict with this charger for this time slot
-    const hasConflict = await hasReservationConflict(data.chargerId, data.startTime, data.endTime);
-    if (hasConflict) {
-        // stop the request
-        throw new ApiError(409, "This charger time slot is already reserved");
-    }
+    const holdKey = createHoldKey(
+        data.chargerId,
+        data.startTime,
+        data.endTime
+    );
 
-    // check if there's an existing hold for this charger in this time slot
-    const holdKey = createHoldKey(data.chargerId, data.startTime, data.endTime);
+    // check if we have a reservation hold first
     const existingHold = await redis.get(holdKey);
     if (!existingHold) {
-        // stop the request
         throw new ApiError(409, "Reservation hold expired or does not exist");
     }
 
-    // create this reservation
-    const reservation = await prisma.reservation.create({
-        data: {
-            ...data,
-            // update reservation status to CONFIRMED
-            status: ReservationStatus.CONFIRMED,
-        },
-        select: reservationSelect,
+    // check if there exists a reservation that overlaps this time slot at this charger
+    const reservation = await prisma.$transaction(async (tx) => {
+        const existingReservation = await tx.reservation.findFirst({
+            where: {
+                chargerId: data.chargerId,
+                status: {
+                    not: ReservationStatus.CANCELLED,
+                },
+                startTime: {
+                    lt: data.endTime,
+                },
+                endTime: {
+                    gt: data.startTime,
+                },
+            },
+        });
+
+        // if there's already a reservation
+        if (existingReservation) {
+            throw new ApiError(409, "This charger time slot is already reserved");
+        }
+
+        // if not, create a new one
+        return tx.reservation.create({
+            data: {
+                ...data,
+                status: ReservationStatus.CONFIRMED,
+            },
+            select: reservationSelect,
+        });
     });
 
-    // delete the reservation hold from Redis
+    // delete the Redis reservation hold
     await redis.del(holdKey);
 
-    // return reservation
     return reservation;
-
 }
 
 /**
  * Create a temporary reservation hold using Redis
  */
 export async function createReservationHold(data: ReservationInput) {
-    // check if there's a confirmed reservation conflict with this charger for this time slot
-    const hasConflict = await hasReservationConflict(data.chargerId, data.startTime, data.endTime);
-    if (hasConflict) {
-        // stop the request
-        throw new ApiError(409, "This charger time slot is already reserved");
+
+    // short distributed lock for this charger
+    const lockKey = `lock:${data.chargerId}`;
+
+    const lock = await redis.set(lockKey, "locked", {
+        EX: 5,
+        NX: true,
+    });
+
+    // if another request already holds the lock, stop request
+    if (!lock) {
+        throw new ApiError(409, "This charger is currently being checked");
     }
 
-    // check if there's an existing hold for this charger in this time slot
-    const holdKey = createHoldKey(data.chargerId, data.startTime, data.endTime);
-    const existingHold = await redis.get(holdKey);
-    if (existingHold) {
-        // stop the request
-        throw new ApiError(409, "This charger time slot is currently being held");
-    }
+    try {
 
-    // if this slot is not held yet, hold this slot for 5 minutes
-    await redis.set(
-        holdKey,
-        JSON.stringify(data), {
-            // expires in 5 minutes
-            EX: 300,
-            NX: true
+        // check if there's a confirmed reservation conflict with this charger for this time slot
+        const hasConflict = await hasReservationConflict(
+            data.chargerId,
+            data.startTime,
+            data.endTime
+        );
+
+        if (hasConflict) {
+            throw new ApiError(409, "This charger time slot is already reserved");
         }
-    );
 
-    // return information of reservation hold
-    return {
-        status: ReservationStatus.HOLD,
-        holdKey,
-        expiresInSeconds: 300,
-        ...data,
-    };
+        // check if there's an overlapping temporary Redis hold
+        const hasHoldConflict = await hasOverlappingHold(
+            data.chargerId,
+            data.startTime,
+            data.endTime
+        );
+
+        if (hasHoldConflict) {
+            throw new ApiError(409, "This charger time slot is currently being held");
+        }
+
+        // unique Redis key for this hold
+        const holdKey = createHoldKey(
+            data.chargerId,
+            data.startTime,
+            data.endTime
+        );
+
+        // store temporary hold for 5 minutes
+        await redis.set(
+            holdKey,
+            JSON.stringify(data),
+            {
+                EX: 300,
+                NX: true,
+            }
+        );
+
+        // return reservation hold info
+        return {
+            status: ReservationStatus.HOLD,
+            holdKey,
+            expiresInSeconds: 300,
+            ...data,
+        };
+
+    } finally {
+
+        // always release lock even if request fails
+        await redis.del(lockKey);
+    }
 }

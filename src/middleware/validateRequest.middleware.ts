@@ -26,7 +26,7 @@ export function validateRequest(schema: z.ZodTypeAny, source: RequestValidationS
         }
 
         // if request [source] is valid, replace request body with clean validated data
-        req[source] = result.data;
+        Object.assign(req[source], result.data);
         // validation passes, continue to controller
         next();
     };

@@ -4,6 +4,7 @@ import { UserRole } from "@prisma/client";
 import app from "../src/app";
 import { env } from "../src/config/env";
 import prisma from "../src/config/prisma";
+import redis from "../src/config/redis";
 
 /**
  * Creates fake JWT token for testing protected routes
@@ -41,6 +42,7 @@ describe("Stations API", () => {
 
     // after each test, disconnect prisma
     afterAll(async () => {
+        await redis.quit();
         await prisma.$disconnect();
     });
 
@@ -55,7 +57,7 @@ describe("Stations API", () => {
         expect(response.body.success).toBe(false);
     });
 
-    it("should reject if a customer wants to get all stations", async () => {
+    it("should allow a customer to get all stations", async () => {
         // create a customer token
         const customerToken = createTestToken(
             "plushie-test-id",
@@ -67,10 +69,10 @@ describe("Stations API", () => {
             .get("/api/stations")
             .set("Authorization", `Bearer ${customerToken}`);
         
-        // expect response status code to be 403
-        expect(response.statusCode).toBe(403);
-        // expect response success to be false
-        expect(response.body.success).toBe(false);
+        // expect response status code to be 200
+        expect(response.statusCode).toBe(200);
+        // expect response success to be true
+        expect(response.body.success).toBe(true);
     });
 
     it("should allow an admin to create a station", async () => {

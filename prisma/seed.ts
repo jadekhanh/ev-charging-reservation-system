@@ -2,10 +2,17 @@ import {
   ChargerStatus,
   ConnectorType,
   PowerLevel,
+  ReservationStatus,
 } from "@prisma/client";
 import prisma from "../src/config/prisma";
 
 async function main() {
+    // clearing database before starting seeding
+    await prisma.reservation.deleteMany();
+    await prisma.charger.deleteMany();
+    await prisma.station.deleteMany();
+    await prisma.user.deleteMany();
+
     /**
     * 1st charging station
     */
@@ -235,19 +242,21 @@ async function main() {
     /**
      * 1st reservation at station1 for customer1 from 2 - 3PM
      */
-    const reservation1 = await prisma.charger.findFirst({
+    const charger1 = await prisma.charger.findFirst({
         where: {
             stationId: station1.id,
             status: ChargerStatus.AVAILABLE,
         },
     });
-    if (reservation1) {
+    if (charger1) {
         await prisma.reservation.create({
             data: {
                 userId: customer1.id,
-                chargerId: reservation1.id,
-                startTime: new Date("2026-05-20T14:00:00"),
-                endTime: new Date("2026-05-20T15:00:00"),
+                stationId: station1.id,
+                chargerId: charger1.id,
+                startTime: new Date("2026-05-20T08:00:00.000Z"),
+                endTime: new Date("2026-05-20T09:00:00.000Z"),
+                status: ReservationStatus.CONFIRMED,
             },
         });
     }
@@ -255,19 +264,21 @@ async function main() {
     /**
      * 2nd reservation at station2 for customer2 from 8 - 9AM
      */
-    const reservation2 = await prisma.charger.findFirst({
+    const charger2 = await prisma.charger.findFirst({
         where: {
             stationId: station2.id,
             status: ChargerStatus.AVAILABLE,
         },
     });
-    if (reservation2) {
+    if (charger2) {
         await prisma.reservation.create({
             data: {
                 userId: customer2.id,
-                chargerId: reservation2.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                stationId: station2.id,
+                chargerId: charger2.id,
+                startTime: new Date("2026-05-20T18:00:00.000Z"),
+                endTime: new Date("2026-05-20T19:00:00.000Z"),
+                status: ReservationStatus.CONFIRMED,
             },
         });
     }

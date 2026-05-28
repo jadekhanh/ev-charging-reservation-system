@@ -4,7 +4,7 @@ import { UserRole, ChargerStatus, ConnectorType, PowerLevel, ReservationStatus }
 import app from "../src/app";
 import { env } from "../src/config/env";
 import prisma from "../src/config/prisma";
-import { response } from "express";
+import redis from "../src/config/redis";
 
 /**
  * Creates fake JWT token for testing protected routes
@@ -43,6 +43,7 @@ const inputStation = {
 describe("Reservations API", () => {
     // before each test, delete all reservations, chargers, stations, and users
     beforeEach(async () => {
+        await redis.flushDb();
         await prisma.reservation.deleteMany();
         await prisma.charger.deleteMany();
         await prisma.station.deleteMany();
@@ -51,6 +52,7 @@ describe("Reservations API", () => {
 
     // after each test, disconnect prisma
     afterAll(async () => {
+        await redis.quit();
         await prisma.$disconnect();
     });
 
@@ -58,8 +60,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -88,9 +90,11 @@ describe("Reservations API", () => {
             .post("/api/reservations/hold")
             .set("Authorization", `Bearer ${customerToken}`)
             .send({
+                userId: customer.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                stationId: station.id,
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             });
         
         // expect response status code to be 201
@@ -103,8 +107,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -133,9 +137,11 @@ describe("Reservations API", () => {
             .post("/api/reservations/hold")
             .set("Authorization", `Bearer ${customerToken}`)
             .send({
+                userId: customer.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                stationId: station.id,
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             });
 
         // create a response to confirm a reservation
@@ -143,9 +149,11 @@ describe("Reservations API", () => {
             .post("/api/reservations/confirm")
             .set("Authorization", `Bearer ${customerToken}`)
             .send({
+                userId: customer.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                stationId: station.id,
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             });
         
         // expect response status code to be 201
@@ -158,8 +166,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -189,8 +197,8 @@ describe("Reservations API", () => {
                 userId: customer.id,
                 stationId: station.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             }
         });
 
@@ -211,8 +219,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -242,8 +250,8 @@ describe("Reservations API", () => {
                 userId: customer.id,
                 stationId: station.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             }
         });
 
@@ -263,8 +271,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -273,7 +281,7 @@ describe("Reservations API", () => {
         const anotherCustomer = await prisma.user.create({
             data: {
                 email: "macaroni@plushies.com",
-                password: "macaronihash7",
+                passwordHash: "macaronihash7",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -303,8 +311,8 @@ describe("Reservations API", () => {
                 userId: customer.id,
                 stationId: station.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             }
         });
 
@@ -323,8 +331,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -354,8 +362,8 @@ describe("Reservations API", () => {
                 userId: customer.id,
                 stationId: station.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             }
         });
 
@@ -382,8 +390,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -413,8 +421,8 @@ describe("Reservations API", () => {
                 userId: customer.id,
                 stationId: station.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             }
         });
 
@@ -433,8 +441,8 @@ describe("Reservations API", () => {
         // create an admin
         const admin = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.ADMIN,
             }
         });
@@ -464,8 +472,8 @@ describe("Reservations API", () => {
                 userId: admin.id,
                 stationId: station.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             }
         });
 
@@ -491,8 +499,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -521,9 +529,11 @@ describe("Reservations API", () => {
             .post("/api/reservations/hold")
             .set("Authorization", `Bearer ${customerToken}`)
             .send({
+                userId: customer.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                stationId: station.id,
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             });
         
         // expect reservation hold to have status code 201
@@ -536,9 +546,11 @@ describe("Reservations API", () => {
             .post("/api/reservations/hold")
             .set("Authorization", `Bearer ${customerToken}`)
             .send({
+                userId: customer.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                stationId: station.id,
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             });
         
         // expect response status code to be 409
@@ -551,8 +563,8 @@ describe("Reservations API", () => {
         // create a customer
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -561,7 +573,7 @@ describe("Reservations API", () => {
         const anotherCustomer = await prisma.user.create({
             data: {
                 email: "macaroni@plushies.com",
-                password: "macaronihash7",
+                passwordHash: "macaronihash7",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -591,8 +603,8 @@ describe("Reservations API", () => {
                 userId: customer.id,
                 stationId: station.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             }
         });
 
@@ -608,6 +620,21 @@ describe("Reservations API", () => {
     });
 
     it("should reject reservation hold without token", async () => {
+        // create a customer
+        const customer = await prisma.user.create({
+            data: {
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
+                role: UserRole.CUSTOMER,
+            }
+        });
+
+        // create a customer token
+        const customerToken = createTestToken(
+            customer.id,
+            UserRole.CUSTOMER,
+        );
+
         // create a station
         const station = await prisma.station.create({
             data: inputStation,
@@ -625,9 +652,11 @@ describe("Reservations API", () => {
         const response = await request(app)
             .post("/api/reservations/hold")
             .send({
+                userId: customer.id,
                 chargerId: charger.id,
-                startTime: new Date("2026-05-20T8:00:00"),
-                endTime: new Date("2026-05-20T9:00:00"),
+                stationId: station.id,
+                startTime: new Date("2026-05-20T14:30:00.000Z"),
+                endTime: new Date("2026-05-20T15:30:00.000Z"),
             });
         
         // expect response status code to be 401
@@ -640,8 +669,8 @@ describe("Reservations API", () => {
         // create 1st customer
         const customerOne = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -656,7 +685,7 @@ describe("Reservations API", () => {
         const customerTwo = await prisma.user.create({
             data: {
                 email: "macaroni@plushies.com",
-                password: "macaronihash7",
+                passwordHash: "macaronihash7",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -687,18 +716,22 @@ describe("Reservations API", () => {
                 .post("/api/reservations/hold")
                 .set("Authorization", `Bearer ${customerOneToken}`)
                 .send({
+                    userId: customerOne.id,
                     chargerId: charger.id,
-                    startTime: new Date("2026-05-20T8:00:00"),
-                    endTime: new Date("2026-05-20T9:00:00"),
+                    stationId: station.id,
+                    startTime: new Date("2026-05-20T14:30:00.000Z"),
+                    endTime: new Date("2026-05-20T15:30:00.000Z"),
                 }),
 
             request(app)
                 .post("/api/reservations/hold")
                 .set("Authorization", `Bearer ${customerTwoToken}`)
                 .send({
+                    userId: customerTwo.id,
                     chargerId: charger.id,
-                    startTime: new Date("2026-05-20T8:00:00"),
-                    endTime: new Date("2026-05-20T9:00:00"),
+                    stationId: station.id,
+                    startTime: new Date("2026-05-20T14:30:00.000Z"),
+                    endTime: new Date("2026-05-20T15:30:00.000Z"),
                 }),
 
         ]);
@@ -715,8 +748,8 @@ describe("Reservations API", () => {
         // create 1st customer
         const customerOne = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email: `user${Date.now()}@test.com`,
+                passwordHash: "jellycathash6",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -731,7 +764,7 @@ describe("Reservations API", () => {
         const customerTwo = await prisma.user.create({
             data: {
                 email: "macaroni@plushies.com",
-                password: "macaronihash7",
+                passwordHash: "macaronihash7",
                 role: UserRole.CUSTOMER,
             }
         });
@@ -762,18 +795,22 @@ describe("Reservations API", () => {
                 .post("/api/reservations/hold")
                 .set("Authorization", `Bearer ${customerOneToken}`)
                 .send({
+                    userId: customerOne.id,
                     chargerId: charger.id,
-                    startTime: new Date("2026-05-20T8:00:00"),
-                    endTime: new Date("2026-05-20T9:00:00"),
+                    stationId: station.id,
+                    startTime: new Date("2026-05-20T14:30:00.000Z"),
+                    endTime: new Date("2026-05-20T15:30:00.000Z"),
                 }),
 
             request(app)
                 .post("/api/reservations/hold")
                 .set("Authorization", `Bearer ${customerTwoToken}`)
                 .send({
+                    userId: customerTwo.id,
                     chargerId: charger.id,
-                    startTime: new Date("2026-05-20T8:30:00"),
-                    endTime: new Date("2026-05-20T9:30:00"),
+                    stationId: station.id,
+                    startTime: new Date("2026-05-20T15:00:00.000Z"),
+                    endTime: new Date("2026-05-20T16:00:00.000Z"),
                 }),
 
         ]);
@@ -786,4 +823,3 @@ describe("Reservations API", () => {
         expect(statusCodes.filter((code) => code === 409).length).toBe(1);
     });
 })
-

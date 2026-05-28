@@ -1,6 +1,18 @@
-version: '3.9'
-
 services:
+  app:
+    build: .
+    container_name: ev_backend
+    restart: always
+    ports:
+      - "5001:5000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/ev_charging_db
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your_jwt_secret
+
   postgres:
     image: postgres:16
     container_name: ev_postgres

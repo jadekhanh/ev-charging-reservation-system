@@ -4,6 +4,7 @@ import app from "../src/app";
 import { ChargerStatus, ConnectorType, PowerLevel, UserRole, ReservationStatus } from "@prisma/client";
 import prisma from "../src/config/prisma";
 import { env } from "../src/config/env";
+import redis from "../src/config/redis";
 
 /**
  * Creates fake JWT token for testing protected routes
@@ -50,15 +51,18 @@ describe ("Availability API", () => {
 
     // after each test, disconnect prisma
     afterAll(async () => {
+        await redis.quit();
         await prisma.$disconnect();
     });
 
     it("should return available chargers at a station", async () => {
         // create a customer
+        const email = `user-${crypto.randomUUID()}@test.com`;
+        const passwordHash = "jellycathash6";
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email,
+                passwordHash,
                 role: UserRole.CUSTOMER,
             }
         });
@@ -105,10 +109,12 @@ describe ("Availability API", () => {
 
     it("should exclude chargers with overlapping reservations", async () => {
         // create a customer
+        const email = `user-${crypto.randomUUID()}@test.com`;
+        const passwordHash = "jellycathash6";
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email,
+                passwordHash,
                 role: UserRole.CUSTOMER,
             }
         });
@@ -165,10 +171,12 @@ describe ("Availability API", () => {
 
     it("should include 1 charger with non-overlapping reservations", async () => {
         // create a customer
+        const email = `user-${crypto.randomUUID()}@test.com`;
+        const passwordHash = "jellycathash6";
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email,
+                passwordHash,
                 role: UserRole.CUSTOMER,
             }
         });
@@ -227,10 +235,12 @@ describe ("Availability API", () => {
 
     it("should return all stations with at least 1 available charger for a requested time slot", async () => {
         // create a customer
+        const email = `user-${crypto.randomUUID()}@test.com`;
+        const passwordHash = "jellycathash6";
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email,
+                passwordHash,
                 role: UserRole.CUSTOMER,
             }
         });
@@ -276,10 +286,12 @@ describe ("Availability API", () => {
 
     it("should return all available time slots for a charger on a specific date", async () => {
         // create a customer
+        const email = `user-${crypto.randomUUID()}@test.com`;
+        const passwordHash = "jellycathash6";
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email,
+                passwordHash,
                 role: UserRole.CUSTOMER,
             }
         });
@@ -323,10 +335,12 @@ describe ("Availability API", () => {
 
     it("should exclude unavailable time slots with overlapping reservations", async () => {
         // create a customer
+        const email = `user-${crypto.randomUUID()}@test.com`;
+        const passwordHash = "jellycathash6";
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email,
+                passwordHash,
                 role: UserRole.CUSTOMER,
             }
         });
@@ -392,10 +406,12 @@ describe ("Availability API", () => {
 
     it("should reject missing/invalid query params", async () => {
         // create a customer
+        const email = `user-${crypto.randomUUID()}@test.com`;
+        const passwordHash = "jellycathash6";
         const customer = await prisma.user.create({
             data: {
-                email: "jellycat@plushies.com",
-                password: "jellycathash6",
+                email,
+                passwordHash,
                 role: UserRole.CUSTOMER,
             }
         });

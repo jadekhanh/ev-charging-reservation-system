@@ -213,7 +213,16 @@ export async function cancelReservationController(req: Request, res: Response) {
  * POST /api/reservations/hold
  */
 export async function createReservationHoldController(req: Request, res: Response) {
-    const reservation = await createReservationHold(req.body);
+    const userId = req.user?.id;
+
+    if (!userId) {
+        throw new ApiError(401, "Authentication required");
+    }
+
+    const reservation = await createReservationHold({
+        ...req.body,
+        userId,
+    });
 
     return res.status(201).json({
         success: true,
@@ -226,7 +235,16 @@ export async function createReservationHoldController(req: Request, res: Respons
  * POST /api/reservations/confirm
  */
 export async function confirmReservationController(req: Request, res: Response) {
-    const reservation = await confirmReservation(req.body);
+    const userId = req.user?.id;
+
+    if (!userId) {
+        throw new ApiError(401, "Authentication required");
+    }
+
+    const reservation = await confirmReservation({
+        ...req.body,
+        userId,
+    });
 
     return res.status(201).json({
         success: true,
